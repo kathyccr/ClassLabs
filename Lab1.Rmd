@@ -1,0 +1,226 @@
+---
+title: "Class 1 Lab"
+author: "Kathia Cardenas"
+date: "August 29, 2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyverse)
+
+```
+
+## Lab: Class One Survey Analysis
+### INSTRUCTIONS
+
+Complete all tasks 1-7 using reproducible coding practices (annotation of all code). Use R syntax to solve all problems (i.e. do not manually change values/variables in datasets or check them manually to make sure things are correct except as a double or triple check). Please cut and paste each problem before each R markdown chunk and annotate your code within the chunks. Compare and consolidate your answers. Select one member of your group to walk the class through how each problem was solved. Elect one member of your group to turn in your consolidated code with answers.
+
+1. Import class one survey data from our Github site (https://github.com/kijohnson/ADA-2024) (The dataset is called ‘Class 1 Survey Fall 2024_di.csv’), calling the R dataframe that you create C1survey.
+
+```{r}
+C1survey <-
+ read_csv("https://raw.githubusercontent.com/kijohnson/ADA-2024/main/Class%201%20(Getting%20started%20and%20RR%20I)/Lab/Class%201%20Survey%20Fall%202024_di.csv")
+
+```
+2. Determine: a. the number of observations (i.e. the number of people who filled out the survey) and b. the number of variables in the dataframe.
+
+```{r}
+#To get the number of rows and columns
+dim(C1survey) 
+
+#There are 29 observations and 27 variables.
+```
+
+3. a. Rename the column variables to something shorter and that is descriptive of what the variable is about (for example like_dogs for the ‘Do you like dogs?’ question variable) and b. Display that they are renamed.
+
+```{r}
+#a. renaming the column variables
+names(C1survey)[1:27]<-c("id", "like_cats", "like_dogs", "have_desert", "slogan",
+"fav_day", "larkORowl", "fav_food", "fav_drink", "fav_season", "fav_month", "hobby",
+"program", "specialization", "stat_software", "R_exp", "coding_comfort", "coding_length",
+"top_three","public_health_interest", "fav_num", "bday", "bmonth", "country", "state",
+"city", "highest_educ_level")
+
+#b.displaying variable's name
+colnames(C1survey)
+      
+```
+
+4. Write code to determine and display the number of factor, integer, numerical, and character variables there are in the C1survey dataset.
+
+```{r}
+#number of variables by type.
+sum(sapply(C1survey, is.character))
+sum(sapply(C1survey, is.factor))
+sum(sapply(C1survey, is.integer))
+sum(sapply(C1survey, is.numeric))
+
+```
+
+5. a. Using code, check the bday and bmonth variables for any unusual or missing values. If you find any, b. describe what you will do with the unusual values in a comment before or immediately following the code that does it, and c. after you have cleaned up any unusual values, find the median bday and month. *Note: please make sure that your bday and month variables are numeric before doing statistics
+
+```{r}
+#a.
+#check for missing values using is.na()
+is.na(C1survey$bmonth)
+is.na(C1survey$bday)
+
+#check for unusual values in bday (e.g., day should be between 1 and 31)
+unusual_bday <- C1survey$bday[!(C1survey$bday >= 1 & C1survey$bday <= 31)]
+
+#check for unusual values in bmonth (e.g., month should be between 1 and 12)
+unusual_bmonth <- C1survey$bmonth[!(C1survey$bmonth >= 1 & C1survey$bmonth <= 12)]
+
+if(length(unusual_bday) > 0) {
+  cat("Unusual values in bday: ", paste(unique(unusual_bday), collapse = ", "), "\n")
+} else {
+  cat("No unusual values found in bday.\n")
+}
+
+if(length(unusual_bmonth) > 0) {
+  cat("Unusual values in bmonth: ", paste(unique(unusual_bmonth), collapse = ", "), "\n")
+} else {
+  cat("No unusual values found in bmonth.\n")
+}
+
+#!(C1survey$bday >= 1 & C1survey$bday <= 31): Checks for values in bday that are outside the valid range (1-31).
+#!(C1survey$bmonth >= 1 & C1survey$bmonth <= 12): Checks for values in bmonth that are outside the valid range (1-12).
+#unique(): Ensures only unique unusual values are displayed.
+#length(): Check if there are any unusual values to report.
+#paste(): function with the collapse argument to concatenate the values with commas.
+
+```
+
+b. describe what you will do with the unusual values in a comment before or immediately following the code that does it.
+
+```{r}
+#In this case, since the unusual values in bday and bmonth are just a few entry errors, we can correct them using a data cleaning approach.
+
+C1survey <- C1survey %>%
+   mutate(bday = recode_factor(bday,
+                            'March 31st' ="31",
+                            'May 21-report 21' = "21"))%>%
+  mutate(bmonth = recode_factor(bmonth,
+                            'March' ="3",
+                            'September' = "9",
+                            'February' = "2",
+                            'May 21-report 5' = "5",
+                            'July' = "7"))%>%
+#convert 0 value in bday to NA
+  mutate(bday = ifelse(bday == "0", NA, bday))
+```
+
+c. after you have cleaned up any unusual values, find the median bday and month. *Note: please make sure that your bday and month variables are numeric before doing statistics.
+
+```{r}
+#convert bday and bmonth to numeric
+C1survey$bday <-as.numeric(C1survey$bday)
+C1survey$bmonth <-as.numeric(C1survey$bmonth)
+
+#get median
+median(C1survey$bday, na.rm=TRUE) 
+median(C1survey$bmonth, na.rm=TRUE) 
+
+```
+
+6. a. Create a new variable called bseason that gives the season according to Northern Meteorological season in which respondents were born (winter = 12/1 to 2/29, spring = 3/1 to 5/31, summer = 6/1 to 8/31, fall = 9/1 to 11/30). b. Using the table function, print a table of Seasons in the columns and bmonths in the rows that allows you to check that the coding is correct c. Sum the columns using the addmargins function to answer the question of how many classmates were born in each season? Include your answer in the code.
+
+
+```{r}
+#a.
+library(dplyr)
+#create bseason variable based on the Northern Meteorological seasons
+C1survey <- C1survey %>%
+  mutate(bseason = case_when(
+    bmonth %in% c(12, 1, 2) ~ "Winter",     
+    bmonth %in% c(3, 4, 5) ~ "Spring",       
+    bmonth %in% c(6, 7, 8) ~ "Summer",      
+    bmonth %in% c(9, 10, 11) ~ "Fall",        
+    TRUE ~ NA_character_  #any values not covered above (e.g., NA values)
+  ))
+
+```
+
+b. Using the table function, print a table of Seasons in the columns and bmonths in the rows that allows you to check that the coding is correct 
+
+```{r}
+library(dplyr)
+#create a table of bmonths by bseason
+SeasonsTable <- table(C1survey$bmonth, C1survey$bseason)
+print(SeasonsTable)
+```
+
+c. Sum the columns using the addmargins function to answer the question of how many classmates were born in each season? Include your answer in the code.
+
+```{r}
+# Add margins to sum the columns (total counts per season)
+SumSeasonsTable <- addmargins(SeasonsTable)
+
+print(SumSeasonsTable)
+
+#Answer: 
+#    Fall  Spring  Summer  Winter   
+#     5      12      7       5    
+
+```
+
+7. Pick your favorite variable or variables to analyze, come up with a question you want to answer with that variable or variables, generate the code, and provide an answer to your question. Describe what you did using comments (i.e. #’s).
+
+#Question: Does a person's chronotype influence their preference for certain types of beverages?
+
+```{r cars}
+#Creating new variable with four categories of of beverages based on flavor
+C1survey <- C1survey %>%
+  mutate(DrinkFlavor = case_when(
+    fav_drink %in% c("Water", "Tea", "water", "Taro milk Tea", "sparkling water", "Butter milk", "Matcha latte") ~ "Neutral/Mild Drinks",
+    fav_drink %in% c("Pineapple juice","Pineapple Juice", "Fruit Juice", "Apple Cider", "Banana Choc smoothie", "Freshly pressed fruit juice") ~ "Fruity Drinks",
+    fav_drink %in% c("Sprite", "coke", "dr pepper", "cola", "Mountain Dew", "Ginger ale") ~ "Carbonated Drinks",
+    fav_drink %in% c("Whiskey sour", "Porter beer", "Baileys", "Mint Mojito", "Soju (A traditional Korean liquor)", "Ginger beer") ~ "Alcoholic Drinks",
+    TRUE ~ "Other" 
+  ))
+
+#Performing Chi-Square test
+CrossTable(y = C1survey$DrinkFlavor,
+           x = C1survey$larkORowl,
+           expected = TRUE,
+           prop.c = FALSE,
+           prop.t = FALSE,
+           prop.chisq = FALSE,
+           chisq = TRUE,
+           sresid = TRUE)
+
+#Answer: There is no statistically significant association between a people's chronotype and their preference for certain types of beverages (chi-squared(1)=3.88; p=.86).
+
+```
+
+# Question 2:  Is there a correlation between the level of comfort with coding and the number of months of coding experience?
+```{r}
+#Changing the variables in years to months
+# Load necessary library
+library(dplyr)
+library(gmodels)
+
+# Transform coding_length into new categories
+C1survey_question <- C1survey %>%
+  select(coding_comfort, coding_length) %>%
+  mutate(coding_length = case_when(
+    coding_length %in% c("0-3 months", "4-6 months") ~ "0-6 months",
+    coding_length %in% c("7-9 months", "9 months to 1 year") ~ "7-12 months",
+    coding_length %in% c(">1 to 2 years") ~ "13-24 months",
+    coding_length %in% c(">2 years") ~ ">24 months"))
+
+#Performing Chi-Square test
+CrossTable(y = C1survey_question$coding_comfort,
+           x = C1survey_question$coding_length,
+           expected = TRUE,
+           prop.c = FALSE,
+           prop.t = FALSE,
+           prop.chisq = FALSE,
+           chisq = TRUE,
+           sresid = TRUE)
+
+#Answer: A Pearson's chi-Squared test was conducted to examine the relationship between coding comfort levels (rated on a scale from 1 to 5) and the duration of coding experience (measured in months and categorized accordingly). The statistically significant p-value (p =.0178) indicates a relationship between the number of months of coding experience and the degree of comfort, suggesting that the length of coding experience influences an individual's comfort level.
+
+```
