@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(tidyverse)
+library(dplyr)
+library(gmodels)
 
 ```
 
@@ -20,6 +22,7 @@ Complete all tasks 1-7 using reproducible coding practices (annotation of all co
 1. Import class one survey data from our Github site (https://github.com/kijohnson/ADA-2024) (The dataset is called ‘Class 1 Survey Fall 2024_di.csv’), calling the R dataframe that you create C1survey.
 
 ```{r}
+# Importing cvs format dataset and naming the dataframe C1survey.
 C1survey <-
  read_csv("https://raw.githubusercontent.com/kijohnson/ADA-2024/main/Class%201%20(Getting%20started%20and%20RR%20I)/Lab/Class%201%20Survey%20Fall%202024_di.csv")
 
@@ -27,7 +30,7 @@ C1survey <-
 2. Determine: a. the number of observations (i.e. the number of people who filled out the survey) and b. the number of variables in the dataframe.
 
 ```{r}
-#To get the number of rows and columns
+#Getting number of rows (observations) and columns(variables) using dim function
 dim(C1survey) 
 
 #There are 29 observations and 27 variables.
@@ -36,14 +39,14 @@ dim(C1survey)
 3. a. Rename the column variables to something shorter and that is descriptive of what the variable is about (for example like_dogs for the ‘Do you like dogs?’ question variable) and b. Display that they are renamed.
 
 ```{r}
-#a. renaming the column variables
+#a. renaming the variables
 names(C1survey)[1:27]<-c("id", "like_cats", "like_dogs", "have_desert", "slogan",
 "fav_day", "larkORowl", "fav_food", "fav_drink", "fav_season", "fav_month", "hobby",
 "program", "specialization", "stat_software", "R_exp", "coding_comfort", "coding_length",
 "top_three","public_health_interest", "fav_num", "bday", "bmonth", "country", "state",
 "city", "highest_educ_level")
 
-#b.displaying variable's name
+#b.displaying variable's name using colname function
 colnames(C1survey)
       
 ```
@@ -57,13 +60,14 @@ sum(sapply(C1survey, is.factor))
 sum(sapply(C1survey, is.integer))
 sum(sapply(C1survey, is.numeric))
 
+#sum(): adds up the values.
 ```
 
 5. a. Using code, check the bday and bmonth variables for any unusual or missing values. If you find any, b. describe what you will do with the unusual values in a comment before or immediately following the code that does it, and c. after you have cleaned up any unusual values, find the median bday and month. *Note: please make sure that your bday and month variables are numeric before doing statistics
 
 ```{r}
 #a.
-#check for missing values using is.na()
+#check for missing values employing is.na()
 is.na(C1survey$bmonth)
 is.na(C1survey$bday)
 
@@ -96,7 +100,7 @@ if(length(unusual_bmonth) > 0) {
 b. describe what you will do with the unusual values in a comment before or immediately following the code that does it.
 
 ```{r}
-#In this case, since the unusual values in bday and bmonth are just a few entry errors, we can correct them using a data cleaning approach.
+#In this case, since the unusual values in bday and bmonth are just a few entry errors, we can correct them using a data cleaning approach, employing mutate function.
 
 C1survey <- C1survey %>%
    mutate(bday = recode_factor(bday,
@@ -108,18 +112,19 @@ C1survey <- C1survey %>%
                             'February' = "2",
                             'May 21-report 5' = "5",
                             'July' = "7"))%>%
-#convert 0 value in bday to NA
+
+  #convert 0 value in bday to NA
   mutate(bday = ifelse(bday == "0", NA, bday))
 ```
 
 c. after you have cleaned up any unusual values, find the median bday and month. *Note: please make sure that your bday and month variables are numeric before doing statistics.
 
 ```{r}
-#convert bday and bmonth to numeric
+#converting bday and bmonth in numeric variables
 C1survey$bday <-as.numeric(C1survey$bday)
 C1survey$bmonth <-as.numeric(C1survey$bmonth)
 
-#get median
+#getting median
 median(C1survey$bday, na.rm=TRUE) 
 median(C1survey$bmonth, na.rm=TRUE) 
 
@@ -130,7 +135,6 @@ median(C1survey$bmonth, na.rm=TRUE)
 
 ```{r}
 #a.
-library(dplyr)
 #create bseason variable based on the Northern Meteorological seasons
 C1survey <- C1survey %>%
   mutate(bseason = case_when(
@@ -146,8 +150,7 @@ C1survey <- C1survey %>%
 b. Using the table function, print a table of Seasons in the columns and bmonths in the rows that allows you to check that the coding is correct 
 
 ```{r}
-library(dplyr)
-#create a table of bmonths by bseason
+#creating a table of bmonths by bseason using the table function
 SeasonsTable <- table(C1survey$bmonth, C1survey$bseason)
 print(SeasonsTable)
 ```
@@ -155,7 +158,7 @@ print(SeasonsTable)
 c. Sum the columns using the addmargins function to answer the question of how many classmates were born in each season? Include your answer in the code.
 
 ```{r}
-# Add margins to sum the columns (total counts per season)
+# Adding margins to sum the columns (total counts per season)
 SumSeasonsTable <- addmargins(SeasonsTable)
 
 print(SumSeasonsTable)
@@ -197,12 +200,8 @@ CrossTable(y = C1survey$DrinkFlavor,
 
 # Question 2:  Is there a correlation between the level of comfort with coding and the number of months of coding experience?
 ```{r}
-#Changing the variables in years to months
-# Load necessary library
-library(dplyr)
-library(gmodels)
 
-# Transform coding_length into new categories
+#Transforming coding_length variable into new categories
 C1survey_question <- C1survey %>%
   select(coding_comfort, coding_length) %>%
   mutate(coding_length = case_when(
